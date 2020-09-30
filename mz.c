@@ -9,7 +9,7 @@
 #define tracei(x) printf(#x " -> %i\n", (int)(x));
 #define trace2f(x,y) printf(#x ", " #y " -> %f, %f\n", (double)(x), (double)(y));
 
-#define patchWidth 1024
+#define patchWidth 256
 #define patchHeight patchWidth
 
 int windowWidth, windowHeight;
@@ -28,9 +28,11 @@ fractal(double x, double y, GLubyte *r, GLubyte *g, GLubyte *b)
   while (1) {
     if (iter > maxIter)
       break;
-    double z2r = zr*zr - zi*zi;
+    double zrsq = zr*zr;
+    double zisq = zi*zi;
+    double z2r = zrsq - zisq;
     double z2i = 2*zr*zi;
-    if (z2r + z2i > 4)
+    if (zrsq + zisq > 4)
       break;
     zr = z2r + cr;
     zi = z2i + ci;
@@ -115,7 +117,10 @@ double
   current_xcenter = 0,
   current_width = 4,
   current_ycenter = 0,
-  current_height = 2.25;
+  current_height = 2.25,
+  current_xspeed = 0,
+  current_yspeed = 0;
+
 
 // map x/y to screen x/y
 double mapx(double x) {
@@ -224,17 +229,35 @@ mouseMove(int x, int y) {
   mousey = y;
 }
 
+double clamped(double x) {
+  double lim = 0.05;
+  if (x < -lim) return x+lim;
+  if (x > lim) return x-lim;
+  return 0;
+}
+
 void
 step() {
   if (mousex < 0)
     return;
   
-  double zoom = !zoomout ? 0.998 : 1.002;
+  double zoom = 1.0;
+  if (zoomin > 0)
+    zoom -= 0.0005*zoomin;
+  else if (zoomout > 0)
+    zoom += 0.0005*zoomout;
   double x = (double)mousex/(windowWidth/2) - 1;
   double y = - ((double)mousey/(windowHeight/2) - 1);
-  current_xcenter += current_width/2 * x * 0.01;
-  current_ycenter += current_height/2 * y * 0.01;
-  if (zoomin || zoomout) {
+  x = clamped(x);
+  y = clamped(y);
+  current_xspeed += current_width/2 * x * 0.01;
+  current_yspeed += current_height/2 * y * 0.01;
+  double f = 0.98;
+  current_xspeed *= f;
+  current_yspeed *= f;
+  current_xcenter += current_xspeed * 0.01;
+  current_ycenter += current_yspeed * 0.01;
+  if (zoom != 1.0) {
     current_width *= zoom;
     current_height *= zoom;
   }
@@ -247,13 +270,13 @@ void keyboard(unsigned char key, int x, int y)
    switch (key) {
    case 'a':
    case 'A':
-     zoomin = 1;
+     zoomin += 1;
      zoomout = 0;
      break;
    case 'e':
    case 'E':
      zoomin = 0;
-     zoomout = 1;
+     zoomout += 1;
      break;
    case 'o':
    case 'O':
