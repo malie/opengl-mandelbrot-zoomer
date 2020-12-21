@@ -1,4 +1,4 @@
-LIBS=-lGL -lGLU -lglut -lm 
+LIBS=-lGL -lGLU -lglut -lm -lpthread
 
 mz: mz.c
 	gcc -O3 $^ $(LIBS) -o $@
